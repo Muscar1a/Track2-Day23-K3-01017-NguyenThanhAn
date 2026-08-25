@@ -1,4 +1,5 @@
 # scripts/down_bare.ps1
+
 # Dừng toàn bộ các tiến trình bare-mode dựa vào PID trong run/*.pid
 $ErrorActionPreference = "SilentlyContinue"
 $RootDir = (Resolve-Path "$PSScriptRoot\..").Path
@@ -18,4 +19,19 @@ if (Test-Path "run") {
         Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue
     }
 }
+
+@(8001, 8002, 8080) | ForEach-Object {
+    $port = $_
+    $conns = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+    if ($conns) {
+        $conns | ForEach-Object {
+            if ($_.OwningProcess -and $_.OwningProcess -gt 0) {
+                try {
+                    Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue
+                } catch {}
+            }
+        }
+    }
+}
+
 Write-Output "all stopped"

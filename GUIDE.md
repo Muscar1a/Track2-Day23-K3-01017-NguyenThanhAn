@@ -90,9 +90,9 @@ curl localhost:8002/v1/state
 Generate traffic, wait 8 seconds, then take Region A down mid-flight:
 
 ```bash
-python3 loadgen/traffic.py --duration 40 --rps 2 --out reports/drill-1-nodr.jsonl &
+python loadgen/traffic.py --duration 40 --rps 2 --out reports/drill-1-nodr.jsonl &
 sleep 8
-python3 chaos/kill_region.py --region a --mode netblock --mock
+python chaos/kill_region.py --region a --mode netblock --mock
 ```
 
 `netblock --mock` sends `SIGSTOP` in bare mode: the TCP connection still opens, but nothing answers — the same symptom as a dropped packet, so the client hangs until timeout. `--mode stop` sends `SIGKILL` instead, which fails fast with a connection error.
@@ -100,7 +100,7 @@ python3 chaos/kill_region.py --region a --mode netblock --mock
 Once the load generator finishes, measure the (non-existent) recovery:
 
 ```bash
-python3 tools/measure_rto.py --loadgen reports/drill-1-nodr.jsonl --target-rto 300
+python tools/measure_rto.py --loadgen reports/drill-1-nodr.jsonl --target-rto 300
 ```
 
 **Reference run** (yours will differ — that's expected): 32 requests total, first failure at `+0.2s` with a `2017.7ms` timeout (`reports/drill-1-nodr.jsonl:17`), 16/32 requests failed, verdict `"rto_verdict":"NO_RECOVERY"`.
@@ -108,7 +108,7 @@ python3 tools/measure_rto.py --loadgen reports/drill-1-nodr.jsonl --target-rto 3
 Restore Region A before moving on — **`--backend bare` is required** in bare mode:
 
 ```bash
-python3 chaos/kill_region.py restore --region a --backend bare
+python chaos/kill_region.py restore --region a --backend bare
 ```
 
 > `restore` has no `--mock` shortcut. Omit `--backend bare` and it defaults to Docker, which will fail if you don't have a daemon running. If you used `--mode stop` earlier, the process was `SIGKILL`'d — restore will report `need_manual_start`; just re-run `bash scripts/up_bare.sh`.
@@ -167,17 +167,17 @@ Fill in the one-page template so someone who did **not** write this code could e
 `dr/failover.py` restores from a snapshot — but a fresh checkout has never taken one. You must run ingest + replication **before** the attack, or `failover.py` will die at `2_restore_snapshot`.
 
 ```bash
-python3 state/ingest.py --region a --rate 0.5 --duration 150 &
-python3 state/replicate.py --every 30 --duration 150 --backend fs &
+python state/ingest.py --region a --rate 0.5 --duration 150 ;
+python state/replicate.py --every 30 --duration 150 --backend fs ;
 sleep 5   # let the first replication cycle complete before anything else starts
 
-python3 loadgen/traffic.py --duration 100 --rps 2 --out reports/drill-2-withdr.jsonl &
-python3 dr/health_checker.py --interval 5 --threshold 3 --duration 100 \
+python loadgen/traffic.py --duration 100 --rps 2 --out reports/drill-2-withdr.jsonl ;
+python dr/health_checker.py --interval 5 --threshold 3 --duration 100 \
     --out reports/health-events.jsonl &
 sleep 12
-python3 chaos/kill_region.py --region a --mode netblock --mock
-python3 dr/runbook.py --primary a --target b --backend fs --auto
-python3 tools/measure_rto.py --loadgen reports/drill-2-withdr.jsonl --target-rto 300
+python chaos/kill_region.py --region a --mode netblock --mock
+python dr/runbook.py --primary a --target b --backend fs --auto
+python tools/measure_rto.py --loadgen reports/drill-2-withdr.jsonl --target-rto 300
 ```
 
 ### Reading the Result

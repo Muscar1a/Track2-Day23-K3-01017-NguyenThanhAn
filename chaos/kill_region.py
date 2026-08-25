@@ -68,6 +68,13 @@ def pid_of(region: str) -> int | None:
     if not f.exists():
         return None
     pid = int(f.read_text().strip())
+    if os.name == "nt":
+        import ctypes
+        handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+        if handle:
+            ctypes.windll.kernel32.CloseHandle(handle)
+            return pid
+
     try:
         os.kill(pid, 0)
         return pid
@@ -96,7 +103,17 @@ def kill(region: str, mode: str, backend: str, force_both: bool, mock: bool):
         # netblock: SIGSTOP -> TCP handshake vẫn xong nhưng không ai trả lời => request TREO
         #           (đúng hành vi của iptables DROP ở tầng app)
         # stop    : SIGKILL -> cổng đóng => ConnectError ngay
-        os.kill(pid, signal.SIGSTOP if mode == "netblock" else signal.SIGKILL)
+        if os.name == "nt":
+            if mode == "netblock":
+                import ctypes
+                handle = ctypes.windll.kernel32.OpenProcess(0x0800, False, pid)
+                if handle:
+                    ctypes.windll.ntdll.NtSuspendProcess(handle)
+                    ctypes.windll.kernel32.CloseHandle(handle)
+            else:
+                os.kill(pid, signal.SIGTERM)
+        else:
+            os.kill(pid, signal.SIGSTOP if mode == "netblock" else signal.SIGKILL)
     else:
         svc = f"serving-{region}"
         if mode == "stop":
@@ -111,7 +128,14 @@ def restore(region: str, backend: str):
     if backend == "bare":
         pid = pid_of(region)
         if pid:
-            os.kill(pid, signal.SIGCONT)
+            if os.name == "nt":
+                import ctypes
+                handle = ctypes.windll.kernel32.OpenProcess(0x0800, False, pid)
+                if handle:
+                    ctypes.windll.ntdll.NtResumeProcess(handle)
+                    ctypes.windll.kernel32.CloseHandle(handle)
+            else:
+                os.kill(pid, signal.SIGCONT)
             return event(action="restore", region=region, method="SIGCONT", pid=pid)
         return event(action="restore", region=region, method="need_manual_start",
                      note="process da bi SIGKILL, chay `make up-bare` lai")

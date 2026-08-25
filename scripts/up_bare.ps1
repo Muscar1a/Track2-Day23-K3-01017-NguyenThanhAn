@@ -13,20 +13,11 @@ Set-Content -Path "run/region-b.pid" -Value "" -NoNewline
 Set-Content -Path "run/edge.pid" -Value "" -NoNewline
 
 # Tự động tìm Python executable có sẵn uvicorn
-$PythonCmd = "python"
-$PythonPrefixArgs = @()
-
-$null = cmd /c "py -3.11 -c ""import uvicorn"" 2>nul"
-if ($LASTEXITCODE -eq 0) {
-    $PythonCmd = "py"
-    $PythonPrefixArgs = @("-3.11")
-} else {
-    $null = cmd /c "python -c ""import uvicorn"" 2>nul"
-    if ($LASTEXITCODE -eq 0) {
-        $PythonCmd = "python"
-        $PythonPrefixArgs = @()
-    }
+$PythonCmd = & py -3.11 -c "import sys; print(sys.executable)" 2>$null
+if (-not $PythonCmd -or -not (Test-Path $PythonCmd)) {
+    $PythonCmd = "python"
 }
+$PythonPrefixArgs = @()
 
 function Start-RegionProcess {
     param(
