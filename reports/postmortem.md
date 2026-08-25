@@ -17,7 +17,7 @@ Theo đúng template §4 "Sau Failover: Blameless Postmortem". Blameless: câu h
 
 - RTO mục tiêu: 300s · đo được: 26.0s · gap: 274.0s (đạt mục tiêu sớm hơn 274.0s)
 - RPO mục tiêu: 300s · đo được: 10.01s (5 doc bị mất) · gap: 289.99s
-- **Bước tốn nhiều giây nhất:** `Health-check detection floor` (15.3s, chiếm 58.8% tổng RTO) — do cơ chế chống flapping yêu cầu 3 chu kỳ probe thất bại liên tiếp ($3 \times 5\text{s} = 15\text{s}$) trước khi xác nhận chuyển trạng thái sang `UNHEALTHY`.
+- **Bước tốn nhiều giây nhất:** `Health-check detection floor` (15.3s, chiếm 58.8% tổng RTO) - do cơ chế chống flapping yêu cầu 3 chu kỳ probe thất bại liên tiếp ($3 \times 5\text{s} = 15\text{s}$) trước khi xác nhận chuyển trạng thái sang `UNHEALTHY`.
 
 ## 3. Root cause (5 whys)
 
